@@ -1,8 +1,8 @@
 import os
 from dotenv import load_dotenv
-from langchain.llms import OpenAI
+from langchain_community.llms import OpenAI
 from crewai import Agent, Task, Crew
-from langchain.utilities import GoogleSerperAPIWrapper
+from langchain_community.utilities import GoogleSerperAPIWrapper
 from langchain.tools import Tool
 from PIL import Image
 import streamlit as st
@@ -21,14 +21,6 @@ if 'SERPER_API_KEY' not in st.session_state:
 # Set environment variables
 os.environ["OPENAI_API_KEY"] = st.session_state.OPENAI_API_KEY
 os.environ["SERPER_API_KEY"] = st.session_state.SERPER_API_KEY
-
-# Check for API keys
-if not st.session_state.OPENAI_API_KEY:
-    st.error("Please set your OpenAI API key in the Streamlit secrets")
-    st.stop()
-if not st.session_state.SERPER_API_KEY:
-    st.error("Please set your Serper API key in the Streamlit secrets")
-    st.stop()
 
 # Initialize OpenAI and search tools
 llm = OpenAI()
@@ -63,6 +55,27 @@ storyteller = Agent(
     tools=[search_tool],
     llm=llm
 )
+
+def create_tasks(topic):
+    research_task = Task(
+        description=f"Research {topic} and find key information suitable for children and teens",
+        expected_output="Detailed research findings about the topic",
+        agent=researcher
+    )
+    
+    writing_task = Task(
+        description=f"Write an engaging and educational article about {topic}",
+        expected_output="Written article suitable for young audiences",
+        agent=content_writer
+    )
+    
+    visualization_task = Task(
+        description=f"Create a visual explanation of {topic}",
+        expected_output="Visual representation of the topic",
+        agent=storyteller
+    )
+    
+    return [research_task, writing_task, visualization_task]
 
 # Streamlit UI
 st.set_page_config(page_title="Kids Research Helper", layout="wide")
