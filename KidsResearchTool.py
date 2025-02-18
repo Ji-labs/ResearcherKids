@@ -9,7 +9,7 @@ import streamlit as st
 import graphviz
 import io
 
-# Load environment variables
+# Load environment variables and set up API keys
 load_dotenv()
 
 # Set up Streamlit secrets
@@ -22,7 +22,7 @@ if 'SERPER_API_KEY' not in st.session_state:
 os.environ["OPENAI_API_KEY"] = st.session_state.OPENAI_API_KEY
 os.environ["SERPER_API_KEY"] = st.session_state.SERPER_API_KEY
 
-# Initialize OpenAI and search tools
+# Initialize tools
 llm = OpenAI()
 search = GoogleSerperAPIWrapper()
 search_tool = Tool(
@@ -56,55 +56,52 @@ storyteller = Agent(
     llm=llm
 )
 
-def create_research_crew(topic):
-    # Create tasks with all required fields
-    research_task = Task(
-        description=f"Research {topic} and find key information suitable for children and teens",
-        agent=researcher,
-        expected_output="A detailed research document about " + topic,
-        context=f"Find age-appropriate information about {topic} that would interest and educate children and teens",
-        tools=[search_tool]
-    )
-    
-    writing_task = Task(
-        description=f"Write an engaging and educational article about {topic}",
-        agent=content_writer,
-        expected_output="An engaging article written for young audiences about " + topic,
-        context=f"Use the research findings to create an engaging article about {topic} suitable for children and teens",
-        tools=[search_tool]
-    )
-    
-    visualization_task = Task(
-        description=f"Create a visual explanation of {topic}",
-        agent=storyteller,
-        expected_output="A visual representation explaining " + topic,
-        context=f"Create a visual explanation of {topic} that helps children and teens understand the concept better",
-        tools=[search_tool]
-    )
-    
-    # Create the crew
-    crew = Crew(
-        agents=[researcher, content_writer, storyteller],
-        tasks=[research_task, writing_task, visualization_task],
-        verbose=True
-    )
-    
-    return crew
+def create_tasks(topic):
+    tasks = [
+        Task(
+            description=f"Research {topic} and find key information suitable for children and teens",
+            expected_output=f"Detailed research findings about {topic}",
+            agent=researcher,
+            async_execution=False,
+            output_file=None,
+            context=f"Research {topic} in a way that's suitable for children and teens"
+        ),
+        Task(
+            description=f"Write an engaging and educational article about {topic}",
+            expected_output=f"An engaging article about {topic} for young audiences",
+            agent=content_writer,
+            async_execution=False,
+            output_file=None,
+            context=f"Write about {topic} in a way that children and teens can understand"
+        ),
+        Task(
+            description=f"Create a visual explanation of {topic}",
+            expected_output=f"A visual representation explaining {topic}",
+            agent=storyteller,
+            async_execution=False,
+            output_file=None,
+            context=f"Create visuals that help explain {topic} to children and teens"
+        )
+    ]
+    return tasks
 
 # Streamlit interface
 st.title("Kids Research Tool 🔍📚")
 
-# Topic input
 topic = st.text_input("Enter a topic to research:", "")
 
 if topic:
     if st.button("Start Research"):
         with st.spinner(f"Researching {topic}..."):
             try:
-                crew = create_research_crew(topic)
+                tasks = create_tasks(topic)
+                crew = Crew(
+                    agents=[researcher, content_writer, storyteller],
+                    tasks=tasks,
+                    verbose=True
+                )
                 result = crew.kickoff()
                 st.success("Research completed!")
                 st.write(result)
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
-
