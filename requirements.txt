@@ -13,3 +13,4 @@ chromadb
 click<9.0.0,>
 instructor<0.6.0,>
 pysqlite3-binary
+setuptools
