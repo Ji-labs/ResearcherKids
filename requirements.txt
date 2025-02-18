@@ -9,4 +9,4 @@ python-dotenv>=1.0.0
 rich>=10.14.0
 requests>=2.31.0
 langchain_community>=0.0.3
-pysqlite3-binary==0.5.2
+pysqlite3-binary
