@@ -2,8 +2,8 @@ import os
 from dotenv import load_dotenv
 from langchain.llms import OpenAI
 from crewai import Agent, Task, Crew
-from langchain.tools import SerperDevTool
-from langchain.agents import Tool
+from langchain.utilities import GoogleSerperAPIWrapper
+from langchain.tools import Tool
 from PIL import Image
 import streamlit as st
 import graphviz
@@ -12,17 +12,32 @@ import io
 # Load environment variables
 load_dotenv()
 
-# Check for required API keys
-if not os.getenv("OPENAI_API_KEY"):
-    st.error("OPENAI_API_KEY not found in environment variables")
+# Set up Streamlit secrets
+if 'OPENAI_API_KEY' not in st.session_state:
+    st.session_state.OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY", "")
+if 'SERPER_API_KEY' not in st.session_state:
+    st.session_state.SERPER_API_KEY = st.secrets.get("SERPER_API_KEY", "")
+
+# Set environment variables
+os.environ["OPENAI_API_KEY"] = st.session_state.OPENAI_API_KEY
+os.environ["SERPER_API_KEY"] = st.session_state.SERPER_API_KEY
+
+# Check for API keys
+if not st.session_state.OPENAI_API_KEY:
+    st.error("Please set your OpenAI API key in the Streamlit secrets")
     st.stop()
-if not os.getenv("SERPER_API_KEY"):
-    st.error("SERPER_API_KEY not found in environment variables")
+if not st.session_state.SERPER_API_KEY:
+    st.error("Please set your Serper API key in the Streamlit secrets")
     st.stop()
 
-# Initialize OpenAI and tools
+# Initialize OpenAI and search tools
 llm = OpenAI()
-search_tool = SerperDevTool()
+search = GoogleSerperAPIWrapper()
+search_tool = Tool(
+    name="Search",
+    func=search.run,
+    description="Search the internet for information"
+)
 
 # Create agents
 researcher = Agent(
@@ -30,7 +45,7 @@ researcher = Agent(
     goal='Find accurate and age-appropriate information on given topics',
     backstory='Expert at finding reliable information for children and teens',
     tools=[search_tool],
-    llm=llm  # Add OpenAI LLM
+    llm=llm
 )
 
 content_writer = Agent(
@@ -38,7 +53,7 @@ content_writer = Agent(
     goal='Write engaging and educational content for young audiences',
     backstory='Experienced in writing for children aged 8-16',
     tools=[search_tool],
-    llm=llm  # Add OpenAI LLM
+    llm=llm
 )
 
 storyteller = Agent(
@@ -46,7 +61,7 @@ storyteller = Agent(
     goal='Create engaging visual explanations of research topics',
     backstory='Expert at breaking down complex topics into visual stories',
     tools=[search_tool],
-    llm=llm  # Add OpenAI LLM
+    llm=llm
 )
 
 # Streamlit UI
