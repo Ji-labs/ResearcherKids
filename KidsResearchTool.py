@@ -56,64 +56,55 @@ storyteller = Agent(
     llm=llm
 )
 
-def create_tasks(topic):
+def create_research_crew(topic):
+    # Create tasks with all required fields
     research_task = Task(
         description=f"Research {topic} and find key information suitable for children and teens",
-        expected_output="Detailed research findings about the topic",
-        agent=researcher
+        agent=researcher,
+        expected_output="A detailed research document about " + topic,
+        context=f"Find age-appropriate information about {topic} that would interest and educate children and teens",
+        tools=[search_tool]
     )
     
     writing_task = Task(
         description=f"Write an engaging and educational article about {topic}",
-        expected_output="Written article suitable for young audiences",
-        agent=content_writer
+        agent=content_writer,
+        expected_output="An engaging article written for young audiences about " + topic,
+        context=f"Use the research findings to create an engaging article about {topic} suitable for children and teens",
+        tools=[search_tool]
     )
     
     visualization_task = Task(
         description=f"Create a visual explanation of {topic}",
-        expected_output="Visual representation of the topic",
-        agent=storyteller
+        agent=storyteller,
+        expected_output="A visual representation explaining " + topic,
+        context=f"Create a visual explanation of {topic} that helps children and teens understand the concept better",
+        tools=[search_tool]
     )
     
-    return [research_task, writing_task, visualization_task]
+    # Create the crew
+    crew = Crew(
+        agents=[researcher, content_writer, storyteller],
+        tasks=[research_task, writing_task, visualization_task],
+        verbose=True
+    )
+    
+    return crew
 
-# Streamlit UI
-st.set_page_config(page_title="Kids Research Helper", layout="wide")
+# Streamlit interface
+st.title("Kids Research Tool 🔍📚")
 
-st.title("🔍 Kids Research Helper")
+# Topic input
+topic = st.text_input("Enter a topic to research:", "")
 
-# Input fields
-topic = st.text_input("What would you like to research?")
-age = st.slider("How old are you?", 8, 16, 12)
+if topic:
+    if st.button("Start Research"):
+        with st.spinner(f"Researching {topic}..."):
+            try:
+                crew = create_research_crew(topic)
+                result = crew.kickoff()
+                st.success("Research completed!")
+                st.write(result)
+            except Exception as e:
+                st.error(f"An error occurred: {str(e)}")
 
-if st.button("Start Research"):
-    if topic:
-        # Create research task
-        research_task = Task(
-            description=f"Research {topic} and provide information suitable for age {age}",
-            agent=researcher
-        )
-        
-        # Create content writing task
-        writing_task = Task(
-            description=f"Write an engaging explanation about {topic} for a {age}-year-old",
-            agent=content_writer
-        )
-        
-        # Create visualization task
-        visualization_task = Task(
-            description=f"Create a visual explanation of {topic} for a {age}-year-old",
-            agent=storyteller
-        )
-        
-        # Create and execute crew
-        crew = Crew(
-            agents=[researcher, content_writer, storyteller],
-            tasks=[research_task, writing_task, visualization_task]
-        )
-        
-        result = crew.kickoff()
-        
-        # Display results
-        st.write("### Research Results")
-        st.write(result)
