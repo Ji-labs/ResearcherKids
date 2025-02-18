@@ -1,0 +1,6 @@
+crewai
+langchain
+pillow
+streamlit
+graphviz
+serper-dev
